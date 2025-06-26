@@ -1,6 +1,7 @@
 [package]
 name = "panel-rs"
 version = "0.1.0"
+edition = "2024"
 authors = ["Nadir Fasola, nadir.fasola@gmail.com"]
 license = "MIT"
 
