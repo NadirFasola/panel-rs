@@ -1,0 +1,5 @@
+[package]
+name = "panel-rs"
+version = "0.1.0"
+authors = ["Nadir Fasola, nadir.fasola@gmail.com"]
+license = "MIT"
