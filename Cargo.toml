@@ -3,3 +3,8 @@ name = "panel-rs"
 version = "0.1.0"
 authors = ["Nadir Fasola, nadir.fasola@gmail.com"]
 license = "MIT"
+
+[dependencies]
+glib = "0.20.12"
+gtk-layer-shell = "0.8.2"
+gtk4 = "0.9.7"
