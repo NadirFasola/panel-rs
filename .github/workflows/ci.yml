@@ -12,41 +12,32 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: archlinux/archlinux:latest
+      options: --user root
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rust + formatter & linter
-        uses: actions-rs/toolchain@v1
+      - name: Cache Cargo
+        uses: actions/cache@v3
         with:
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
-      
-      - name: Add GTK 4 backports PPA
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y software-properties-common
-          sudo add-apt-repository -y ppa:nteodosio/gtk4
-          sudo apt-get update
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install GTK4 dependencies
+      - name: Install Rust, GTK4 & tools on Arch
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            pkg-config \
-            libgtk-layer-shell-dev \
-            libgtk-4-dev \
-            libatk1.0-dev \
-            libgdk-pixbuf2.0-dev \
-            libpango1.0-dev \
-            libcairo2-dev \
-            libepoxy-dev
+          pacman -Syu --noconfirm
+          pacman -Sy --noconfirm base-devel rust gtk4 libadwaita pkgconf
+          rustup component add rustfmt clippy
 
-      - name: fmt check
+      - name: Check formatting
         run: cargo fmt -- --check
 
-      - name: clippy
+      - name: Run Clippy
         run: cargo clippy -- -D warnings
 
       - name: Run tests
