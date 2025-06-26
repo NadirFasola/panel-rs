@@ -27,7 +27,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y software-properties-common
-          sudo add-apt-repository -y ppa:gnome3-team/gtk4
+          sudo add-apt-repository -y ppa:nteodosio/gtk4
           sudo apt-get update
 
       - name: Install GTK4 dependencies
