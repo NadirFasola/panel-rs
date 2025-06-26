@@ -26,20 +26,27 @@ impl WindowManager {
 
         // 2. When the app activates, build our panel window
         app.connect_activate(move |app| {
-            // 2.a. Create a window tied to the application
-            let window = ApplicationWindow::new(app);
-            window.set_default_size(400, 30); // 400 x 30 px window
-            window.set_decorated(false); // remove titlebar
+            let build_ui = || {
+                 // 2.a. Create a window tied to the application
+                let window = ApplicationWindow::new(app);
+                window.set_default_size(400, 30); // 400 x 30 px window
+                window.set_decorated(false); // remove titlebar
 
-            // 2.b. Dock it with layer-shell at the bottom
-            window.init_layer_shell();
-            window.set_layer(Layer::Top);
-            window.set_anchor(Edge::Bottom, true);
-            window.set_exclusive_zone(30);
+                // 2.b. Dock it with layer-shell at the bottom
+                window.init_layer_shell();
+                window.set_layer(Layer::Top);
+                window.set_anchor(Edge::Bottom, true);
+                window.set_exclusive_zone(30);
 
-            // 2.c. Show the window (and all its children)
-            window.show();
-        });
+                // 2.c. Show the window (and all its children)
+                window.show();
+            };
+
+            if let Err(panic_err) = std::panic::catch_unwind(build_ui) {
+                eprintln!("Panic in GTK callback: {:?}", panic_err);
+                std::process::exit(1);
+            }
+       });
 
         // 3. Run the GTK4 main loop
         app.run();
