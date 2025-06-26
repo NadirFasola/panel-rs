@@ -1,0 +1,4 @@
+# config/default.toml
+# List of panel items to enable; currently only "clock" is supported.
+
+items = ["clock"]

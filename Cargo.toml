@@ -1,10 +1,20 @@
 [package]
 name = "panel-rs"
 version = "0.1.0"
+edition = "2024"
 authors = ["Nadir Fasola, nadir.fasola@gmail.com"]
 license = "MIT"
 
 [dependencies]
+# Easy error handling
+anyhow = "1.0.98"
 glib = "0.20.12"
+# GTK4 bindings and Wayland layer-shell for docking
 gtk4 = "0.9.7"
 gtk4-layer-shell = "0.5.0"
+# Config parsing
+serde = { version = "1.0.219", features = ["derive"] }
+# Async timers
+tokio = { version = "1.45.1", features = ["rt", "macros"] }
+# TOML deserialization
+toml = "0.8.23"
