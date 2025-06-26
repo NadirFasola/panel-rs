@@ -1,4 +1,7 @@
 // src/main.rs
+extern crate anyhow;
+extern crate gtk4;
+extern crate gtk4_layer_shell;
 
 mod core;
 
