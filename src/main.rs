@@ -1,12 +1,9 @@
 // src/main.rs
 extern crate anyhow;
-extern crate gtk4;
-extern crate gtk4_layer_shell;
-
-mod core;
+extern crate panel_rs;
 
 use anyhow::Result;
-use core::window::WindowManager;
+use panel_rs::core::window::WindowManager;
 
 fn main() -> Result<()> {
     // Build the window manager (initialises GTK, loads config)
