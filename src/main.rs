@@ -1,6 +1,4 @@
 // src/main.rs
-extern crate anyhow;
-extern crate panel_rs;
 
 use anyhow::Result;
 use panel_rs::core::window::WindowManager;

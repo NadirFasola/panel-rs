@@ -1,5 +1,4 @@
 // tests/basic.rs
-extern crate panel_rs;
 
 use panel_rs::core::window::WindowManager;
 
