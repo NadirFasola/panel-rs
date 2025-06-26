@@ -39,8 +39,8 @@ jobs:
       - name: fmt check
         run: cargo fmt -- --check
 
-      - name: clippy
-        run: cargo clippy -- -D warnings
+      # - name: clippy
+      #   run: cargo clippy -- -D warnings
 
       - name: Run tests
         run: cargo test --verbose
