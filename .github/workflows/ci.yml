@@ -31,7 +31,7 @@ jobs:
       - name: Install Rust, GTK4 & tools on Arch
         run: |
           pacman -Syu --noconfirm
-          pacman -Sy --noconfirm base-devel rustup gtk4 libadwaita pkgconf
+          pacman -Sy --noconfirm base-devel rustup gtk4 libadwaita pkgconf gtk4-layer-shell
           rustup default stable
 
       - name: Check formatting
