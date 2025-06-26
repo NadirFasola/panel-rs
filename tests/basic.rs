@@ -4,7 +4,10 @@ extern crate panel_rs;
 use panel_rs::core::window::WindowManager;
 
 #[test]
-fn new_does_not_panic() {
-    // Seimply ensure new() returns Ok
-    assert!(WindowManager::new().is_ok());
+fn window_manager_new_is_ok() {
+    // Should not panic or return Err
+    assert!(
+        WindowManager::new().is_ok(),
+        "WindowManager::new() failed unexpectedly"
+    );
 }

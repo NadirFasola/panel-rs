@@ -12,14 +12,15 @@ pub struct WindowManager {
 impl WindowManager {
     // Initialises GTK and configuration
     pub fn new() -> Result<Self> {
-        // 1. Initialises GTK4
-        gtk4::init()?;
         // 2. (TODO) Load configuration from file
         Ok(WindowManager {})
     }
 
     // Builds and runs the panel UI loop
     pub fn run(&mut self) -> Result<()> {
+        // 0. Initialize GTK
+        gtk4::init()?;
+
         // 1. Create a GTK4 Application with a reverse-domain ID
         let app = Application::new(
             Some("com.nadirfasola.panel"),
