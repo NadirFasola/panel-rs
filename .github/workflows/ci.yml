@@ -31,8 +31,8 @@ jobs:
       - name: Install Rust, GTK4 & tools on Arch
         run: |
           pacman -Syu --noconfirm
-          pacman -Sy --noconfirm base-devel rust gtk4 libadwaita pkgconf
-          rustup component add rustfmt clippy
+          pacman -Sy --noconfirm base-devel rustup gtk4 libadwaita pkgconf
+          rustup default stable
 
       - name: Check formatting
         run: cargo fmt -- --check
