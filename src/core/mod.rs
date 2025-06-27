@@ -2,5 +2,6 @@
 
 pub mod config;
 pub mod config_loader;
-pub mod window;
 pub mod item;
+pub mod items;
+pub mod window;

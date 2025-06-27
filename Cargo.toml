@@ -8,6 +8,7 @@ license = "MIT"
 [dependencies]
 # Easy error handling
 anyhow = "1.0.98"
+chrono = "0.4.41"
 # XDG directory specification
 directories = "6.0.0"
 glib = "0.20.12"

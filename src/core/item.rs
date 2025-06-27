@@ -1,7 +1,6 @@
 // src/core/item.rs
 
 use anyhow::Result;
-use gtk4::prelude::*;
 use gtk4::Widget;
 
 // Core trait for a status-bar item plugin.
