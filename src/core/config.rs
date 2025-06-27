@@ -1,9 +1,11 @@
 // src/core/config.rs
 
-use serde::Deserialize;
 use anyhow::{Context, Result};
-use std::time::Duration;
+use serde::Deserialize;
+// use std::time::Duration;
 use std::fs;
+
+use super::config_loader::config_paths;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -23,15 +25,13 @@ impl Config {
         // 1. Read system default (which should always exist in installed package)
         let base = fs::read_to_string(&system)
             .with_context(|| format!("Reading system default config at {:?}", system))?;
-        let mut cfg: Config = toml::from_str(&base)
-            .context("Parsing system default config")?;
+        let mut cfg: Config = toml::from_str(&base).context("Parsing system default config")?;
 
         // 2. If user config exists, merge/override
         if user.exists() {
             let overlay = fs::read_to_string(&user)
                 .with_context(|| format!("Reading user config at {:?}", user))?;
-            let user_cfg: Config = toml::from_str(&overlay)
-                .context("Parsing user config")?;
+            let user_cfg: Config = toml::from_str(&overlay).context("Parsing user config")?;
 
             // Simple merge: replace entire items list & refresh
             cfg.items = user_cfg.items;
