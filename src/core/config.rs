@@ -22,6 +22,12 @@ impl Config {
     pub fn load() -> Result<Self> {
         let (system, user) = config_paths();
 
+        // Ensure the user config directory exists
+        if let Some(parent) = user.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("Creating config directory at {:?}", parent))?;
+        }
+
         // 1. Read system default (which should always exist in installed package)
         let base = fs::read_to_string(&system)
             .with_context(|| format!("Reading system default config at {:?}", system))?;
