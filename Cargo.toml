@@ -8,6 +8,8 @@ license = "MIT"
 [dependencies]
 # Easy error handling
 anyhow = "1.0.98"
+# XDG directory specification
+directories = "6.0.0"
 glib = "0.20.12"
 # GTK4 bindings and Wayland layer-shell for docking
 gtk4 = "0.9.7"
