@@ -11,7 +11,7 @@ fn main() -> Result<()> {
     // with exit code 1.
     panic::set_hook(Box::new(|info| {
         // info carries panic information + location
-        eprintln!("Application panicked: {}", info);
+        eprintln!("Application panicked: {info}");
         std::process::exit(1);
     }));
 
