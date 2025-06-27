@@ -49,7 +49,7 @@ impl WindowManager {
             };
 
             if let Err(panic_err) = std::panic::catch_unwind(build_ui) {
-                eprintln!("Panic in GTK callback: {:?}", panic_err);
+                eprintln!("Panic in GTK callback: {panic_err:?}");
                 std::process::exit(1);
             }
         });
