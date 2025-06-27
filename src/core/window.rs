@@ -4,6 +4,8 @@ use gtk4::prelude::*;
 use gtk4::{Application, ApplicationWindow};
 use gtk4_layer_shell::{Edge, Layer, LayerShell};
 
+use tracing::{error, info};
+
 use super::config::Config;
 
 // Manages the panel window lifecycle
@@ -15,16 +17,19 @@ pub struct WindowManager {
 impl WindowManager {
     // Initialises GTK and configuration
     pub fn new() -> Result<Self> {
+        info!("Initialising WindowManager");
         // 1. Load and validate config
         let config = Config::load().context("Loading application configuration")?;
 
         // 2. (TODO) Load configuration from file
+        info!(?config, "WindowManager initialised with config");
         Ok(WindowManager { _config: config })
     }
 
     // Builds and runs the panel UI loop
     pub fn run(&mut self) -> Result<()> {
         // 0. Initialize GTK
+        info!("Starting GTK event loop");
         gtk4::init()?;
 
         // 1. Create a GTK4 Application with a reverse-domain ID
@@ -49,7 +54,7 @@ impl WindowManager {
             };
 
             if let Err(panic_err) = std::panic::catch_unwind(build_ui) {
-                eprintln!("Panic in GTK callback: {panic_err:?}");
+                error!("Panig in GTK callback: {panic_err:?}");
                 std::process::exit(1);
             }
         });

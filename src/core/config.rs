@@ -5,6 +5,8 @@ use serde::Deserialize;
 // use std::time::Duration;
 use std::fs;
 
+use tracing::info;
+
 use super::config_loader::config_paths;
 
 #[derive(Debug, Deserialize)]
@@ -21,6 +23,7 @@ impl Config {
     // Loads system default and then overrides with user config, if present
     pub fn load() -> Result<Self> {
         let (system, user) = config_paths();
+        info!(system = ?system, user = ?user, "Loading configuration paths");
 
         // Ensure the user config directory exists
         if let Some(parent) = user.parent() {
@@ -29,12 +32,14 @@ impl Config {
         }
 
         // 1. Read system default (which should always exist in installed package)
+        info!(path = ?system, "Reading system default config");
         let base = fs::read_to_string(&system)
             .with_context(|| format!("Reading system default config at {system:?}"))?;
         let mut cfg: Config = toml::from_str(&base).context("Parsing system default config")?;
 
         // 2. If user config exists, merge/override
         if user.exists() {
+            info!(path = ?user, "Overlaying user configuration");
             let overlay = fs::read_to_string(&user)
                 .with_context(|| format!("Reading user config at {user:?}"))?;
             let user_cfg: Config = toml::from_str(&overlay).context("Parsing user config")?;
@@ -42,6 +47,8 @@ impl Config {
             // Simple merge: replace entire items list & refresh
             cfg.items = user_cfg.items;
             cfg.refresh_secs = user_cfg.refresh_secs;
+        } else {
+            info!(path = ?user, "No user config found; using defaults");
         }
 
         // 3. Validate config values
@@ -49,6 +56,7 @@ impl Config {
             Err(anyhow::anyhow!("refresh_secs must be at least 1"))?
         }
 
+        info!(?cfg, "Configuration loaded succesfully");
         Ok(cfg)
     }
 }
