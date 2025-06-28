@@ -9,7 +9,7 @@ use tracing::info;
 
 use super::config_loader::config_paths;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Config {
     // Which items to enable in the bar, in order
     pub items: Vec<String>,
