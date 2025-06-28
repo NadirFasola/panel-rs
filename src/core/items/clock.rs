@@ -60,7 +60,7 @@ impl Item for ClockItem {
     }
 
     fn start(&self) -> Result<()> {
-        let interval = self.refresh_secs as u32;
+        let interval = self.refresh_secs;
 
         // Grab the initialized Label - panic if widget() wasn't called
         let label = self
