@@ -35,3 +35,31 @@ impl ItemManager {
         &self.items
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::ItemManager;
+    use crate::core::config::Config;
+
+    #[test]
+    fn load_empty_list() {
+        let cfg = Config {
+            items: vec![],
+            refresh_secs: 1,
+        };
+        let manager = ItemManager::load(&cfg);
+        assert!(manager.items().is_empty());
+    }
+
+    #[test]
+    fn preserves_order() {
+        let cfg = Config {
+            items: vec!["clock".into(), "unknown".into(), "clock".into()],
+            refresh_secs: 5,
+        };
+        let manager = ItemManager::load(&cfg);
+        assert_eq!(manager.items().len(), 2);
+        assert_eq!(manager.items()[0].name(), "clock");
+        assert_eq!(manager.items()[1].name(), "clock");
+    }
+}

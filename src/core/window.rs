@@ -1,8 +1,11 @@
 // src/core/window.rs
 use anyhow::{Context, Result};
-use gtk4::prelude::*;
-use gtk4::{Application, ApplicationWindow, Box, Orientation, CssProvider, style_context_add_provider_for_display, STYLE_PROVIDER_PRIORITY_APPLICATION};
 use gtk4::gdk::Display;
+use gtk4::prelude::*;
+use gtk4::{
+    Application, ApplicationWindow, Box, CssProvider, Orientation,
+    STYLE_PROVIDER_PRIORITY_APPLICATION, style_context_add_provider_for_display,
+};
 use gtk4_layer_shell::{Edge, Layer, LayerShell};
 
 use tracing::{error, info};
@@ -27,8 +30,7 @@ impl WindowManager {
         provider.load_from_path(css_path);
 
         // 3. Grab the default GDK Display
-        let display = Display::default()
-            .expect("Could not get default GDK Display");
+        let display = Display::default().expect("Could not get default GDK Display");
 
         // 4. Add the provider for *all* contexts on this display
         //    This is the correct replacement for gtk_style_context_add_provider_for_display
@@ -40,8 +42,7 @@ impl WindowManager {
     }
 }
 
-impl WindowManager { 
-
+impl WindowManager {
     // Initialises GTK and configuration
     pub fn new() -> Result<Self> {
         info!("Initialising WindowManager");
@@ -65,14 +66,16 @@ impl WindowManager {
         let config = self._config.clone();
         // Build the ItemManager from the config
         let manager = ItemManager::load(&config);
-        info!(num_items = manager.items().len(), "Loaded items from config");
+        info!(
+            num_items = manager.items().len(),
+            "Loaded items from config"
+        );
 
         // 1. Create a GTK4 Application with a reverse-domain ID
         let app = Application::new(Some("com.nadirfasola.panel"), Default::default());
 
         // 2. When the app activates, build our panel window
         app.connect_activate(move |app| {
-
             // Create a window tied to the application
             let window = ApplicationWindow::new(app);
             window.set_default_size(400, 30); // 400 x 30 px window

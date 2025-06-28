@@ -22,3 +22,31 @@ pub trait Item {
     // Called after the widget is in the widget tree and show.
     fn start(&self) -> Result<()>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Item;
+    use anyhow::Error;
+    use gtk4::prelude::Cast;
+
+    struct DummyItem;
+    impl Item for DummyItem {
+        fn name(&self) -> &str { "dummy" }
+        fn widget(&self) -> gtk4::Widget {
+            // we deliberately don’t call Label::new() here
+            // a real Item MUST provide a widget(), but for this
+            // unit test we simply return a placeholder:
+            gtk4::Box::new(gtk4::Orientation::Horizontal, 0).upcast()
+        }
+        fn start(&self) -> Result<(), Error> { Ok(()) }
+    }
+
+    #[test]
+    fn dummy_item_behaves() {
+        let d = DummyItem;
+        // Name is logic only, no GTK needed
+        assert_eq!(d.name(), "dummy");
+        // widget() may return anything that upcasts to Widget
+        assert!(d.start().is_ok());
+    }
+}
