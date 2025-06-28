@@ -1,7 +1,8 @@
 // src/core/window.rs
 use anyhow::{Context, Result};
 use gtk4::prelude::*;
-use gtk4::{Application, ApplicationWindow, Box, Orientation};
+use gtk4::{Application, ApplicationWindow, Box, Orientation, CssProvider, style_context_add_provider_for_display, STYLE_PROVIDER_PRIORITY_APPLICATION};
+use gtk4::gdk::Display;
 use gtk4_layer_shell::{Edge, Layer, LayerShell};
 
 use tracing::{error, info};
@@ -16,6 +17,31 @@ pub struct WindowManager {
 }
 
 impl WindowManager {
+    fn load_css() {
+        // 1. Create a new CSS provider
+        let provider = CssProvider::new();
+
+        // 2. Load your stylesheet from disk (no Result—this returns `()`)
+        //    If you need error signals, you can connect to parsing_error on `provider`.
+        let css_path = "assets/style.css";
+        provider.load_from_path(css_path);
+
+        // 3. Grab the default GDK Display
+        let display = Display::default()
+            .expect("Could not get default GDK Display");
+
+        // 4. Add the provider for *all* contexts on this display
+        //    This is the correct replacement for gtk_style_context_add_provider_for_display
+        style_context_add_provider_for_display(
+            &display,
+            &provider,
+            STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
+    }
+}
+
+impl WindowManager { 
+
     // Initialises GTK and configuration
     pub fn new() -> Result<Self> {
         info!("Initialising WindowManager");
@@ -33,16 +59,20 @@ impl WindowManager {
         info!("Starting GTK event loop");
         gtk4::init()?;
 
+        WindowManager::load_css();
+
         // Clone config so we can move it into the ItemManager
         let config = self._config.clone();
         // Build the ItemManager from the config
         let manager = ItemManager::load(&config);
+        info!(num_items = manager.items().len(), "Loaded items from config");
 
         // 1. Create a GTK4 Application with a reverse-domain ID
         let app = Application::new(Some("com.nadirfasola.panel"), Default::default());
 
         // 2. When the app activates, build our panel window
         app.connect_activate(move |app| {
+
             // Create a window tied to the application
             let window = ApplicationWindow::new(app);
             window.set_default_size(400, 30); // 400 x 30 px window
@@ -53,6 +83,7 @@ impl WindowManager {
             window.set_layer(Layer::Top);
             window.set_anchor(Edge::Bottom, true);
             window.set_exclusive_zone(30);
+            window.set_widget_name("panel-window");
 
             // Create the bar's main container
             let container = Box::new(Orientation::Horizontal, 0);

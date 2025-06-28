@@ -48,6 +48,7 @@ impl Item for ClockItem {
             }
             slot.as_ref().unwrap().clone() // GtkLabel: Clone is a ref-count bump
         };
+        label.style_context().add_class("clock-label");
 
         // Set initial text
         let now = Local::now().format("%H:%M:%S").to_string();

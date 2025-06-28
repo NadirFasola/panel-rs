@@ -1,0 +1,10 @@
+/* assets/style.css */
+#panel-window {
+	background-color: #222;
+}
+
+.clock-label {
+	color: #fff;
+	font-size: 18px;
+	padding: 0 10px;
+}
