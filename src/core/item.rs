@@ -31,14 +31,18 @@ mod tests {
 
     struct DummyItem;
     impl Item for DummyItem {
-        fn name(&self) -> &str { "dummy" }
+        fn name(&self) -> &str {
+            "dummy"
+        }
         fn widget(&self) -> gtk4::Widget {
             // we deliberately don’t call Label::new() here
             // a real Item MUST provide a widget(), but for this
             // unit test we simply return a placeholder:
             gtk4::Box::new(gtk4::Orientation::Horizontal, 0).upcast()
         }
-        fn start(&self) -> Result<(), Error> { Ok(()) }
+        fn start(&self) -> Result<(), Error> {
+            Ok(())
+        }
     }
 
     #[test]
