@@ -15,18 +15,17 @@ use gtk4::{Box as GtkBox, Label, Orientation, Widget};
 pub struct ClockItem {
     // How often (in seconds) to update the displayed time
     refresh_secs: u32,
-    // The GTK Label widget we'll update on each tick.
-    label: Label,
+    // Lazily initialize the GTK Label widget we'll update on each tick.
+    label: std::cell::RefCell<Option<Label>>,
 }
 
 impl ClockItem {
     // Create a new ClockItem with the given refresh interval.
     pub fn new(refresh_secs: u32) -> Self {
         // Initialise the Label now, text will be set in widget()/start()
-        let label = Label::new(None);
         Self {
             refresh_secs,
-            label,
+            label: std::cell::RefCell::new(None),
         }
     }
 }
@@ -39,18 +38,37 @@ impl Item for ClockItem {
     fn widget(&self) -> Widget {
         // Build a container forthe clock (in case we add icons or padding)
         let container = GtkBox::new(Orientation::Horizontal, 4);
+
+        // Lazily initialize the Label
+        let label = {
+            let mut slot = self.label.borrow_mut();
+            if slot.is_none() {
+                // First time: actually call GTK
+                *slot = Some(Label::new(None));
+            }
+            slot.as_ref().unwrap().clone() // GtkLabel: Clone is a ref-count bump
+        };
+
         // Set initial text
         let now = Local::now().format("%H:%M:%S").to_string();
-        self.label.set_text(&now);
+        label.set_text(&now);
         // Pack the label into the box
-        container.append(&self.label);
+        container.append(&label);
         // Return as a generic Widget
         container.upcast::<Widget>()
     }
 
     fn start(&self) -> Result<()> {
         let interval = self.refresh_secs as u32;
-        let label = self.label.clone();
+
+        // Grab the initialized Label - panic if widget() wasn't called
+        let label = self
+            .label
+            .borrow()
+            .as_ref()
+            .expect("widget() must be called before start()")
+            .clone();
+
         // Schedule a repeating timeout on the main context
         timeout_add_seconds_local(interval, move || {
             // Update the label text on each tick

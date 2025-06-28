@@ -1,0 +1,27 @@
+// tests/item_manager.rs
+
+use panel_rs::core::config::Config;
+use panel_rs::core::item_manager::ItemManager;
+
+#[test]
+fn load_clock_item() {
+    let cfg = Config {
+        items: vec!["bar".into(), "clock".into()],
+        refresh_secs: 1,
+    };
+    let manager = ItemManager::load(&cfg);
+    assert_eq!(manager.items().len(), 1);
+    assert_eq!(manager.items()[0].name(), "clock");
+}
+
+#[test]
+fn skip_unknown_items() {
+    let cfg = Config {
+        items: vec!["foo".into(), "clock".into()],
+        refresh_secs: 1,
+    };
+    let manager = ItemManager::load(&cfg);
+    // "foo" is unknown an should be skipped
+    assert_eq!(manager.items().len(), 1);
+    assert_eq!(manager.items()[0].name(), "clock");
+}
