@@ -5,6 +5,7 @@ use super::item::Item;
 
 use super::items::battery::BatteryItem;
 use super::items::clock::ClockItem;
+use super::items::cpu::CpuItem;
 
 use tracing::warn;
 
@@ -31,6 +32,13 @@ impl ItemManager {
                     // cfg.battery_backend
                     let battery = BatteryItem::new(config).expect("Failed to create BatteryItem");
                     items.push(Box::new(battery));
+                }
+                "cpu" => {
+                    if let Ok(cpu) = CpuItem::new(config) {
+                        items.push(Box::new(cpu));
+                    } else {
+                        warn!("Failed to create CpuItem, skipping");
+                    }
                 }
                 other => {
                     warn!(item = %other, "Unknown item in config, skipping");
