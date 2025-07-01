@@ -76,11 +76,11 @@ impl BatteryBackend for UpowerBackend {
         let state: u32 = self.device.get_property("State")?;
 
         let status = match state {
-            1 => "Unknown",
-            2 => "Charging",
-            3 => "Discharging",
-            4 => "Empty",
-            5 => "Fully charged",
+            0 => "Unknown",
+            1 => "Charging",
+            2 => "Discharging",
+            3 => "Empty",
+            4 => "Fully charged",
             _ => "Other",
         }
         .to_string();

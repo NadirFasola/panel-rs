@@ -6,6 +6,7 @@ use super::item::Item;
 use super::items::battery::BatteryItem;
 use super::items::clock::ClockItem;
 use super::items::cpu::CpuItem;
+use super::items::mem::MemItem;
 
 use tracing::warn;
 
@@ -38,6 +39,13 @@ impl ItemManager {
                         items.push(Box::new(cpu));
                     } else {
                         warn!("Failed to create CpuItem, skipping");
+                    }
+                }
+                "mem" => {
+                    if let Ok(mem) = MemItem::new(config) {
+                        items.push(Box::new(mem));
+                    } else {
+                        warn!("Failed to create MemItem, skipping");
                     }
                 }
                 other => {

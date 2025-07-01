@@ -15,7 +15,7 @@ impl CpuSnapshot {
     // Parse a line startin with "cpu" from /proc/stat
     pub fn from_line(line: &str) -> Result<Self> {
         let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.get(0) != Some(&"cpu") || parts.len() < 5 {
+        if parts.first() != Some(&"cpu") || parts.len() < 5 {
             anyhow::bail!("Invalid /proc/stat cpu line: {line}");
         }
         let nums: Vec<u64> = parts[1..]
@@ -34,7 +34,7 @@ impl CpuSnapshot {
             .lines()
             .next()
             .context("Missing cpu line in /proc/stat")
-            .and_then(|l| CpuSnapshot::from_line(l))
+            .and_then(CpuSnapshot::from_line)
     }
 }
 
