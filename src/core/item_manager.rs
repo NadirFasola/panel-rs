@@ -2,7 +2,10 @@
 
 use super::config::Config;
 use super::item::Item;
+
+use super::items::battery::BatteryItem;
 use super::items::clock::ClockItem;
+
 use tracing::warn;
 
 // Manages the set of items for the status bar
@@ -21,6 +24,13 @@ impl ItemManager {
                     // Create a ClockItem with the configured refresh rate
                     let clock = ClockItem::new(config.refresh_secs as u32);
                     items.push(Box::new(clock));
+                }
+                "battery" => {
+                    // Create a BatteryItem
+                    // BatteryItem takes &Config so it can read
+                    // cfg.battery_backend
+                    let battery = BatteryItem::new(config).expect("Failed to create BatteryItem");
+                    items.push(Box::new(battery));
                 }
                 other => {
                     warn!(item = %other, "Unknown item in config, skipping");
@@ -46,6 +56,7 @@ mod tests {
         let cfg = Config {
             items: vec![],
             refresh_secs: 1,
+            ..Default::default()
         };
         let manager = ItemManager::load(&cfg);
         assert!(manager.items().is_empty());
@@ -56,6 +67,7 @@ mod tests {
         let cfg = Config {
             items: vec!["clock".into(), "unknown".into(), "clock".into()],
             refresh_secs: 5,
+            ..Default::default()
         };
         let manager = ItemManager::load(&cfg);
         assert_eq!(manager.items().len(), 2);

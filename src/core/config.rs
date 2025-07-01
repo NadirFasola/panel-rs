@@ -5,6 +5,8 @@ use serde::Deserialize;
 // use std::time::Duration;
 use std::fs;
 
+use super::items::battery::BatteryBackendKind;
+
 use tracing::info;
 
 use super::config_loader::config_paths;
@@ -13,6 +15,10 @@ use super::config_loader::config_paths;
 pub struct Config {
     // Which items to enable in the bar, in order
     pub items: Vec<String>,
+
+    // Which source to use for battery infor: "sysfs" or "upower"
+    #[serde(default = "default_battery_backend")]
+    pub battery_backend: BatteryBackendKind,
 
     // Refresh interval for items that poll (in seconds)
     #[serde(default = "default_refresh_secs")]
@@ -47,6 +53,7 @@ impl Config {
             // Simple merge: replace entire items list & refresh
             cfg.items = user_cfg.items;
             cfg.refresh_secs = user_cfg.refresh_secs;
+            cfg.battery_backend = user_cfg.battery_backend;
         } else {
             info!(path = ?user, "No user config found; using defaults");
         }
@@ -61,7 +68,22 @@ impl Config {
     }
 }
 
+// Defaults to `sysfs` if not specified
+fn default_battery_backend() -> BatteryBackendKind {
+    BatteryBackendKind::Sysfs
+}
+
 // Default to 1 second if not specified
 fn default_refresh_secs() -> u64 {
     1
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            items: Vec::new(),
+            refresh_secs: default_refresh_secs(),
+            battery_backend: crate::core::items::battery::BatteryBackendKind::Sysfs,
+        }
+    }
 }

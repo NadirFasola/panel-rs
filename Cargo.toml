@@ -15,8 +15,10 @@ glib = "0.20.12"
 # GTK4 bindings and Wayland layer-shell for docking
 gtk4 = "0.9.7"
 gtk4-layer-shell = "0.5.0"
+once_cell = "1.21.3"
 # Config parsing
 serde = { version = "1.0.219", features = ["derive"] }
+tempfile = "3.20.0"
 # Async timers
 tokio = { version = "1.45.1", features = ["rt", "macros"] }
 # TOML deserialization
@@ -24,3 +26,4 @@ toml = "0.8.23"
 # useful for structured logging
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter"] }
+zbus = "5.7.1"

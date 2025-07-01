@@ -8,6 +8,7 @@ fn load_clock_item() {
     let cfg = Config {
         items: vec!["bar".into(), "clock".into()],
         refresh_secs: 1,
+        ..Default::default()
     };
     let manager = ItemManager::load(&cfg);
     assert_eq!(manager.items().len(), 1);
@@ -19,6 +20,7 @@ fn skip_unknown_items() {
     let cfg = Config {
         items: vec!["foo".into(), "clock".into()],
         refresh_secs: 1,
+        ..Default::default()
     };
     let manager = ItemManager::load(&cfg);
     // "foo" is unknown an should be skipped
