@@ -1,14 +1,30 @@
 // src/core/item_manager.rs
 
 use super::config::Config;
+
 use super::item::Item;
 
 use super::items::battery::BatteryItem;
 use super::items::clock::ClockItem;
 use super::items::cpu::CpuItem;
 use super::items::mem::MemItem;
+use super::items::temp::TempItem;
 
 use tracing::warn;
+
+/// Try to build one item, logging a standardized warning on error.
+fn make_item<F>(label: &str, f: F) -> Option<Box<dyn Item>>
+where
+    F: FnOnce() -> anyhow::Result<Box<dyn Item>>,
+{
+    match f() {
+        Ok(item) => Some(item),
+        Err(e) => {
+            warn!("Failed to create {}: {e:#}", label);
+            None
+        }
+    }
+}
 
 // Manages the set of items for the status bar
 pub struct ItemManager {
@@ -18,45 +34,43 @@ pub struct ItemManager {
 impl ItemManager {
     // Loads all enabled items in the order specified by the config.
     pub fn load(config: &Config) -> Self {
-        let mut items: Vec<Box<dyn Item>> = Vec::new();
+        let modules = &config.modules;
 
-        for name in &config.items {
-            match name.as_str() {
-                "clock" => {
-                    // Create a ClockItem with the configured refresh rate
-                    let clock = ClockItem::new(config.refresh_secs as u32);
-                    items.push(Box::new(clock));
-                }
-                "battery" => {
-                    // Create a BatteryItem
-                    // BatteryItem takes &Config so it can read
-                    // cfg.battery_backend
-                    let battery = BatteryItem::new(config).expect("Failed to create BatteryItem");
-                    items.push(Box::new(battery));
-                }
-                "cpu" => {
-                    if let Ok(cpu) = CpuItem::new(config) {
-                        items.push(Box::new(cpu));
-                    } else {
-                        warn!("Failed to create CpuItem, skipping");
-                    }
-                }
-                "mem" => {
-                    if let Ok(mem) = MemItem::new(config) {
-                        items.push(Box::new(mem));
-                    } else {
-                        warn!("Failed to create MemItem, skipping");
-                    }
-                }
+        let items = config
+            .items
+            .iter()
+            .filter_map(|name| match name.as_str() {
+                "clock" => make_item("clock", || {
+                    ClockItem::new(&modules.clock).map(|i| Box::new(i) as _)
+                }),
+
+                "battery" => make_item("battery", || {
+                    BatteryItem::new(&modules.battery).map(|i| Box::new(i) as _)
+                }),
+
+                "cpu" => make_item("cpu", || {
+                    CpuItem::new(&modules.cpu).map(|i| Box::new(i) as _)
+                }),
+
+                "mem" => make_item("mem", || {
+                    MemItem::new(&modules.mem).map(|i| Box::new(i) as _)
+                }),
+
+                "temp" => make_item("temp", || {
+                    TempItem::new(&modules.temp).map(|i| Box::new(i) as _)
+                }),
+
                 other => {
                     warn!(item = %other, "Unknown item in config, skipping");
+                    None
                 }
-            }
-        }
+            })
+            .collect();
 
         ItemManager { items }
     }
 
+    /// Borrow the loaded items
     pub fn items(&self) -> &[Box<dyn Item>] {
         &self.items
     }

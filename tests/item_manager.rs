@@ -27,3 +27,13 @@ fn skip_unknown_items() {
     assert_eq!(manager.items().len(), 1);
     assert_eq!(manager.items()[0].name(), "clock");
 }
+
+#[test]
+fn load_temp_item() {
+    let mut cfg = Config::default();
+    cfg.items = vec!["temp".into()];
+    cfg.refresh_secs = 1;
+    let mgr = ItemManager::load(&cfg);
+    assert_eq!(mgr.items().len(), 1);
+    assert_eq!(mgr.items()[0].name(), "temp");
+}

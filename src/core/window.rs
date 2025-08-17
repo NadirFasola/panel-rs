@@ -1,4 +1,5 @@
 // src/core/window.rs
+
 use anyhow::{Context, Result};
 use gtk4::gdk::Display;
 use gtk4::prelude::*;

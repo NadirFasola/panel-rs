@@ -1,32 +1,72 @@
 // src/core/items/clock.rs
-//
-// A status-bar item displaying the current local time,
-// updating every `refresh_secs` seconds.
-
-use super::super::item::Item;
+use crate::core::config::ClockConfig;
+use crate::core::item::Item;
 use anyhow::Result;
 use chrono::Local;
-use glib::ControlFlow;
-use glib::source::timeout_add_seconds_local;
+use glib::{ControlFlow, SourceId, timeout_add_seconds_local};
 use gtk4::prelude::*;
 use gtk4::{Box as GtkBox, Label, Orientation, Widget};
+use std::cell::RefCell;
+use std::fmt::Write;
 
-// ClockItem show `HH:MM:SS` and refreshes periodically
 pub struct ClockItem {
-    // How often (in seconds) to update the displayed time
     refresh_secs: u32,
-    // Lazily initialize the GTK Label widget we'll update on each tick.
-    label: std::cell::RefCell<Option<Label>>,
+    format: String,
+    label_slot: RefCell<Option<Label>>,
+    buffer: RefCell<String>,
+    timeout_id: RefCell<Option<SourceId>>,
 }
 
 impl ClockItem {
-    // Create a new ClockItem with the given refresh interval.
-    pub fn new(refresh_secs: u32) -> Self {
-        // Initialise the Label now, text will be set in widget()/start()
-        Self {
-            refresh_secs,
-            label: std::cell::RefCell::new(None),
+    pub fn new(cfg: &ClockConfig) -> Result<Self> {
+        Ok(Self {
+            refresh_secs: cfg
+                .refresh_secs
+                .expect("ClockConfig.refresh_secs must have been filled"),
+            format: cfg.format.clone(),
+            label_slot: RefCell::new(None),
+            buffer: RefCell::new(String::with_capacity(16)),
+            timeout_id: RefCell::new(None),
+        })
+    }
+
+    fn ensure_label(&self) -> Label {
+        let mut slot = self.label_slot.borrow_mut();
+        if slot.is_none() {
+            let lbl = Label::new(None);
+            lbl.style_context().add_class("clock-label");
+            *slot = Some(lbl);
         }
+        slot.as_ref().unwrap().clone()
+    }
+
+    fn update_text(&self) {
+        let now = Local::now();
+        let mut buf = self.buffer.borrow_mut();
+        buf.clear();
+        // need Write in scope
+        write!(&mut *buf, "{}", now.format(&self.format)).unwrap();
+        self.ensure_label().set_text(&buf);
+    }
+
+    fn start_timer(&self) {
+        // tear down old
+        if let Some(old) = self.timeout_id.borrow_mut().take() {
+            old.remove();
+        }
+
+        let interval = self.refresh_secs;
+        // capture raw pointer
+        let me: *const ClockItem = self;
+
+        let id = timeout_add_seconds_local(interval, move || {
+            // SAFETY: our ClockItem lives for the app’s lifetime
+            let this = unsafe { &*me };
+            this.update_text();
+            ControlFlow::Continue
+        });
+
+        *self.timeout_id.borrow_mut() = Some(id);
     }
 }
 
@@ -36,48 +76,23 @@ impl Item for ClockItem {
     }
 
     fn widget(&self) -> Widget {
-        // Build a container forthe clock (in case we add icons or padding)
         let container = GtkBox::new(Orientation::Horizontal, 4);
-
-        // Lazily initialize the Label
-        let label = {
-            let mut slot = self.label.borrow_mut();
-            if slot.is_none() {
-                // First time: actually call GTK
-                *slot = Some(Label::new(None));
-            }
-            slot.as_ref().unwrap().clone() // GtkLabel: Clone is a ref-count bump
-        };
-        label.style_context().add_class("clock-label");
-
-        // Set initial text
-        let now = Local::now().format("%H:%M:%S").to_string();
-        label.set_text(&now);
-        // Pack the label into the box
-        container.append(&label);
-        // Return as a generic Widget
-        container.upcast::<Widget>()
+        self.update_text();
+        container.append(&self.ensure_label());
+        self.start_timer();
+        container.upcast()
     }
 
     fn start(&self) -> Result<()> {
-        let interval = self.refresh_secs;
-
-        // Grab the initialized Label - panic if widget() wasn't called
-        let label = self
-            .label
-            .borrow()
-            .as_ref()
-            .expect("widget() must be called before start()")
-            .clone();
-
-        // Schedule a repeating timeout on the main context
-        timeout_add_seconds_local(interval, move || {
-            // Update the label text on each tick
-            let now_str = Local::now().format("%H:%M:%S").to_string();
-            // SAFETY: we're in the GTK main thread
-            label.set_text(&now_str);
-            ControlFlow::Continue
-        });
+        self.start_timer();
         Ok(())
+    }
+}
+
+impl Drop for ClockItem {
+    fn drop(&mut self) {
+        if let Some(id) = self.timeout_id.borrow_mut().take() {
+            id.remove();
+        }
     }
 }

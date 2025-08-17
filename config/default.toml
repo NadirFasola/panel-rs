@@ -1,4 +1,28 @@
 # config/default.toml
-# List of panel items to enable; currently only "clock" is supported.
 
-items = ["clock"]
+# Which items (in order) to enable
+items = ["clock", "cpu", "mem", "battery", "temp"]
+
+# Defaults for modules without a specific table
+refresh_secs = 5
+
+[modules.clock]
+format = "%I:%M %p"
+
+[modules.cpu]
+# Maybe a smoothing window, etc.
+
+[modules.mem]
+# switch between MemAvailabe vs MemFree+Buffers+Cached
+preferred = "available"
+
+[modules.battery]
+backend = "upower"	# switch between `sysfs` or `upower`
+device = "/sys/class/power_supply/BAT0"
+refresh_secs = 10	# override default
+# battery has no other settings for now
+
+[modules.temp]
+backend = "thermalzone"	# switch between `thermalzone`, `hwmon` or `lmsensors`
+zones = ["x86_pkg_tmp", "acpitz"]
+sensors = ["x86_pkg_tmp", "acpitz"]

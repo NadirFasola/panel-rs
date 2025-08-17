@@ -1,5 +1,6 @@
 // src/core/items/battery/upower_backend.rs
 
+use super::super::super::config::BatteryConfig;
 use super::item::BatteryBackend;
 use anyhow::{Context, Result};
 use std::convert::TryFrom;
@@ -13,67 +14,71 @@ const UPOWER_IFACE: &str = "org.freedesktop.UPower";
 const DEVICE_IFACE: &str = "org.freedesktop.UPower.Device";
 const DEVICE_TYPE_BATTERY: u32 = 2;
 
+// A `BatteryBackend` that talks to the system D-Bus UPower service
 pub struct UpowerBackend {
-    // conn: Connection,
     device: Proxy<'static>,
-    // batteries: Vec<OwnedObjectPath>,
 }
 
 impl UpowerBackend {
-    pub fn new() -> Result<Self> {
-        let conn = Connection::system().context("Failed to connect to the D-Bus")?;
+    pub fn new(cfg: &BatteryConfig) -> Result<Self> {
+        let conn = Connection::system().context("Failed to connect to the D‑Bus")?;
 
-        let upower_path = OwnedObjectPath::try_from(UPOWER_PATH)
-            .expect("Static string should be a valid ObjectPath");
-
-        let proxy = Proxy::new::<&str, OwnedObjectPath, &str>(
+        // enumerate all devices once
+        let proxy = Proxy::new::<_, _, &str>(
             &conn,
             UPOWER_SERVICE,
-            upower_path,
+            OwnedObjectPath::try_from(UPOWER_PATH)?,
             UPOWER_IFACE,
-        )
-        .context("Failed to create UPower proxy")?;
+        )?;
+        let paths: Vec<OwnedObjectPath> = proxy.call("EnumerateDevices", &())?;
 
-        let list: Vec<OwnedObjectPath> = proxy
-            .call("EnumerateDevices", &())
-            .context("Enumerating UPower devices")?;
-
-        // let mut batteries: Vec<OwnedObjectPath> = Vec::new();
+        // filter only batteries
         let mut batteries = Vec::new();
-        for path in list {
-            let dev = Proxy::new::<&str, OwnedObjectPath, &str>(
-                &conn,
-                UPOWER_SERVICE,
-                path.clone(),
-                DEVICE_IFACE,
-            )
-            .context("Creating Device proxy")?;
-            let typ: u32 = dev.get_property("Type")?;
-            if typ == DEVICE_TYPE_BATTERY {
-                batteries.push(path);
+        for path in paths {
+            let dev = Proxy::new(&conn, UPOWER_SERVICE, path.clone(), DEVICE_IFACE)?;
+            if dev.get_property::<u32>("Type")? == DEVICE_TYPE_BATTERY {
+                batteries.push((path.clone(), dev));
             }
         }
-
         if batteries.is_empty() {
             anyhow::bail!("No battery devices found via UPower");
         }
 
-        let battery_path = batteries.remove(0);
-        let device = Proxy::new(&conn, UPOWER_SERVICE, battery_path, DEVICE_IFACE)
-            .context("Creating Device proxy")?;
+        // if user specified one, pick that; otherwise pick the first
+        let device_proxy = if let Some(ref want) = cfg.device {
+            // try to match either the object path or the “native path” property
+            batteries
+                .into_iter()
+                .find_map(|(path, dev)| {
+                    let native: String = dev.get_property("NativePath").ok()?;
+                    if &path.to_string() == want || &native == want {
+                        Some(dev)
+                    } else {
+                        None
+                    }
+                })
+                .ok_or_else(|| anyhow::anyhow!("No UPower device matching '{}'", want))?
+        } else {
+            // default
+            batteries.into_iter().next().unwrap().1
+        };
 
         Ok(Self {
-            // conn,
-            // batteries,
-            device,
+            device: device_proxy,
         })
     }
 }
 
 impl BatteryBackend for UpowerBackend {
     fn read(&self) -> Result<(u8, String)> {
-        let pct: f64 = self.device.get_property("Percentage")?;
-        let state: u32 = self.device.get_property("State")?;
+        let pct: f64 = self
+            .device
+            .get_property("Percentage")
+            .context("Getting UPower Percentage")?;
+        let state: u32 = self
+            .device
+            .get_property("State")
+            .context("Getting UPower state")?;
 
         let status = match state {
             0 => "Unknown",
