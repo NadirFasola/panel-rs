@@ -28,14 +28,15 @@ A compositor-agnostic Wayland panel bar written in Rust & GTK4.
 ## Current state (short)
 
 * ✅ Clock item (`ClockItem`) — configurable format & refresh rate
-* ✅ Battery item (`BatteryItem`) — `SysfsBackend` and `UpowerBackend` (zbus)
-* ✅ CPU item (`CpuItem`) — `/proc/stat` backend
-* ✅ Memory item (`MemItem`) — `/proc/meminfo` parsing
-* ✅ Temperature item (`TempItem`) — thermal zone / hwmon / lm-sensors backends
+* ✅ Battery item (`BatteryItem`) — `SysfsBackend` and `UpowerBackend` (zbus), dynamic icons
+* ✅ CPU item (`CpuItem`) — `/proc/stat` backend, optional dynamic icon
+* ✅ Memory item (`MemItem`) — `/proc/meminfo`, optional dynamic icon
+* ✅ Temperature item (`TempItem`) — thermal zone / hwmon / lm-sensors, optional dynamic icon
 * ✅ Config refactor: per-module subconfigs and global defaults
 * ✅ Unit tests for parsing/backends
+* ✅ `icon.rs` helper module added for centralized icon management
 
-Not implemented yet: system tray (SNI), volume widget, icon theming and format templates, click popups & animations.
+Not implemented yet: system tray (SNI), volume widget, Waybar-like format templates, click popups & animations.
 
 ---
 
@@ -59,10 +60,11 @@ Not implemented yet: system tray (SNI), volume widget, icon theming and format t
   * [x] `CpuItem` (proc/stat)
   * [x] `MemItem` (proc/meminfo)
   * [x] `TempItem` (thermal zone, hwmon, lm-sensors)
+  * [x] Unified icon support via `icon.rs`
   * [x] Unit tests for backends
   * [ ] System tray (SNI) — high priority next sprint
   * [ ] Volume widget (Pulse / PipeWire)
-  * [ ] Icon and format support (Waybar-like templates)
+  * [ ] Format templates & icons (Waybar-like)
   * [ ] Click-to-open popups (volume, connectivity)
   * [ ] Animations & polished UI
 
@@ -129,17 +131,28 @@ refresh_secs = 1
 [modules.battery]
 backend = "sysfs"  # or "upower"
 refresh_secs = 5
+icon = "auto"      # optional dynamic icon, or static path/name
+
+[modules.cpu]
+refresh_secs = 5
+icon = "cpu-symbolic"  # optional static or dynamic icon
+
+[modules.mem]
+refresh_secs = 5
+icon = "mem-symbolic"  # optional static or dynamic icon
 
 [modules.temp]
 backend = "thermal_zone"  # thermal_zone | hwmon | lmsensors
 refresh_secs = 10
 sensors = ["x86_pkg_temp", "acpitz"]
+icon = "temperature-symbolic"  # optional static or dynamic icon
 ```
 
 Behavior notes:
 
 * If a module doesn't specify `refresh_secs`, it inherits the global `refresh_secs`.
-* `modules.*.sensors` is used by temperature backends to pick only certain sensors; empty means "auto-discover all".
+* `modules.*.sensors` is used by temperature backends to pick only certain sensors; empty means *"auto-discover all"*.
+* `modules.*.icon` is optional; *"auto"* or a theme icon name triggers dynamic icon selection where implemented.
 
 ---
 
@@ -162,6 +175,7 @@ Behavior notes:
 * `zbus` is used only where it makes sense (UPower D-Bus). Tests and fallbacks exist for environments without UPower.
 * Timer callbacks run on the main (glib) context to avoid GTK threading issues.
 * Discovery operations (like scanning `/sys/class/...`) are cached using `OnceLock`/`OnceCell` to avoid repeated expensive file system traversals.
+* Icon handling is centralized to reduce duplication and improve maintainability.
 * Unit tests focus on parsers and file-backed logic; GTK UI is intentionally small and isolated.
 
 ---
