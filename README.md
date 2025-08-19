@@ -1,84 +1,181 @@
 # panel-rs
 
-A compositor-agnostic Wayland panel bar writte in Rust & GTK.
+A compositor-agnostic Wayland panel bar written in Rust & GTK4.
 
-## Overview
+> **Status:** This README reflects the state on branch `feature/sprint-3-essential-widgets`.
 
-- __Layer shell__ based docking
-- Workspace switcher, clock, battery, system tray
-- Configurable via TOML
+---
 
-## Getting started
+## Quick summary
 
-1. __Install dependencies__
-    - GTK4 dev libraries
-    - Rust & Cargo
-1. __Build__
-    ```bash
-    cargo build --release
-    ```
-1. __Run__
-    ```bash
-    ./target/release/panel-rs
-    ```
+* Language: **Rust**
+* UI: **GTK4** (GTK widgets for items)
+* Backends: sysfs, hwmon, thermal-zone, UPower (zbus), lm-sensors
+* Design: plugin-style `Item` trait, per-module TOML configuration, unit-tested parsing/backends
 
-## Usage
+---
 
-### Configuration
+## What this project is
 
-By default, the system config lives in the repository under `config/deafult.toml`.
+`panel-rs` aims to be a small, fast, configurable status bar that is compositor-agnostic (Wayland). It uses GTK4 for widgets and layer-shell for docking. The codebase focuses on:
 
-To override settings (for example, to change which items appear or tweak refresh intervals), copy this file into your user config directory `$XDG_CONFIG_HOME/panel-rs`. You can then edit `$XDG_CONFIG_HOME/panel-rs/config.toml` to your liking. When you next run `panel-rs`, it will load your user config instead of the bundled default.
+* Minimal, well-tested backends (prefer sysfs where possible)
+* Clear plugin architecture for items
+* Small set of dependencies and idiomatic Rust
 
-## Plugin Architecture
+---
 
-This bar uses a **plugin** system for its items:
+## Current state (short)
 
-1. **`Item` trait**  
-   Defined in `src/core/item.rs`, it requires:
-   - `fn name(&self) -> &str` — a unique identifier.
-   - `fn widget(&self) -> gtk4::Widget` — builds and returns the UI element.
-   - `fn start(&self) -> Result<()>` — kicks off any background timers or signals.
+* ✅ Clock item (`ClockItem`) — configurable format & refresh rate
+* ✅ Battery item (`BatteryItem`) — `SysfsBackend` and `UpowerBackend` (zbus)
+* ✅ CPU item (`CpuItem`) — `/proc/stat` backend
+* ✅ Memory item (`MemItem`) — `/proc/meminfo` parsing
+* ✅ Temperature item (`TempItem`) — thermal zone / hwmon / lm-sensors backends
+* ✅ Config refactor: per-module subconfigs and global defaults
+* ✅ Unit tests for parsing/backends
 
-2. **`ItemManager`**  
-   In `src/core/item_manager.rs`, it:
-   - Loads `Config::items: Vec<String>`.
-   - Instantiates the matching `Item` implementations (e.g. `ClockItem`).
-   - Exposes `items()` so the `WindowManager` can build the UI.
+Not implemented yet: system tray (SNI), volume widget, icon theming and format templates, click popups & animations.
 
-3. **Adding a new item**  
-   To introduce a new plugin:
-   - Create `src/core/items/<your_item>.rs`.
-   - Implement the `Item` trait for your struct.
-   - Add a `match` arm in `ItemManager::load()` mapping your item’s name to its constructor.
-   - Write unit tests under the module and update README with examples.
+---
 
-### Example: `ClockItem`
+## Roadmap & Timeline (checked = done)
 
-```rust
-use crate::core::item::Item;
-use gtk4::Label;
-use std::error::Error;
+* Sprint 1 — skeleton & architecture
 
-pub struct ClockItem { /* ... */ }
+  * [x] Project skeleton, Cargo layout, module scaffolding
+  * [x] `Item` trait and `ItemManager`
+  * [x] `WindowManager` & layer-shell integration
+  * [x] Config loader + default TOML
 
-impl Item for ClockItem {
-    fn name(&self) -> &str { "clock" }
-    fn widget(&self) -> gtk4::Widget {
-        let label = Label::new(None);
-        label.set_text("00:00:00");
-        label.upcast()
-    }
-    fn start(&self) -> Result<(), Box<dyn Error>> {
-        // schedule updates...
-        Ok(())
-    }
-}
+* Sprint 2 — essential items & config
+
+  * [x] `ClockItem` (lazy widget, timers)
+  * [x] `BatteryItem` (sysfs, UPower backends)
+  * [x] Tests and config refactor
+
+* Sprint 3 — essential widgets (current branch)
+
+  * [x] `CpuItem` (proc/stat)
+  * [x] `MemItem` (proc/meminfo)
+  * [x] `TempItem` (thermal zone, hwmon, lm-sensors)
+  * [x] Unit tests for backends
+  * [ ] System tray (SNI) — high priority next sprint
+  * [ ] Volume widget (Pulse / PipeWire)
+  * [ ] Icon and format support (Waybar-like templates)
+  * [ ] Click-to-open popups (volume, connectivity)
+  * [ ] Animations & polished UI
+
+* Future
+
+  * [ ] Pure-Rust SNI (or vendor a small dependency)
+  * [ ] Subscribe to DBus signals for instant updates
+  * [ ] Packaging (deb / rpm / Flatpak)
+
+---
+
+## Build & run
+
+### Prerequisites
+
+* Rust (stable toolchain)
+* GTK4 development libraries (for the UI)
+* On Linux: `/proc`, `/sys`, and a session/system bus for D-Bus backends
+
+### Build
+
+```bash
+cargo build --release
+```
+
+### Run (development)
+
+```bash
+RUST_LOG=info cargo run
+```
+
+### Run release binary
+
+```bash
+./target/release/panel-rs
+```
+
+### Tests
+
+```bash
+cargo test
+```
+
+Notes:
+
+* Many unit tests are pure-Rust and should run in CI. Tests that require GTK/D-Bus might need environment setup.
+
+---
+
+## Configuration (TOML)
+
+The project uses a TOML config with a global section and `modules` subsection. Module configs can override the global `refresh_secs`.
+
+Example `config.toml`:
+
+```toml
+items = ["battery", "clock", "cpu", "mem", "temp"]
+refresh_secs = 5
+
+[modules.clock]
+refresh_secs = 1
+# format = "%H:%M:%S"
+
+[modules.battery]
+backend = "sysfs"  # or "upower"
+refresh_secs = 5
+
+[modules.temp]
+backend = "thermal_zone"  # thermal_zone | hwmon | lmsensors
+refresh_secs = 10
+sensors = ["x86_pkg_temp", "acpitz"]
+```
+
+Behavior notes:
+
+* If a module doesn't specify `refresh_secs`, it inherits the global `refresh_secs`.
+* `modules.*.sensors` is used by temperature backends to pick only certain sensors; empty means "auto-discover all".
+
+---
+
+## Architecture & file map (where to look)
+
+* `src/core/item.rs` — `Item` trait
+* `src/core/item_manager.rs` — constructs items from config
+* `src/core/window.rs` — GTK app, layer-shell and window layout
+* `src/core/config.rs` — config loader and per-module defaults
+* `src/core/items/` — each item lives under this directory:
+
+  * `clock/`, `battery/`, `cpu/`, `mem/`, `temp/`
+  * backends are in each item's subdirectory (e.g. `battery/sysfs_backend.rs`)
+
+---
+
+## Design choices & rationale
+
+* Prefer *local sysfs* access for metrics (lower dependency surface).
+* `zbus` is used only where it makes sense (UPower D-Bus). Tests and fallbacks exist for environments without UPower.
+* Timer callbacks run on the main (glib) context to avoid GTK threading issues.
+* Discovery operations (like scanning `/sys/class/...`) are cached using `OnceLock`/`OnceCell` to avoid repeated expensive file system traversals.
+* Unit tests focus on parsers and file-backed logic; GTK UI is intentionally small and isolated.
+
+---
 
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md).
+See `CONTRIBUTING.md` for contribution guidelines, coding style and PR workflow. Short notes:
+
+* Keep modules small and testable.
+* Prefer `sysfs` where possible, fall back to system services only when necessary.
+* Add unit tests for parsing logic and backends.
+
+---
 
 ## License
 
-MIT &copy; 2025 Nadir Fasola.
+MIT © 2025 Nadir Fasola
