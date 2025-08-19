@@ -1,5 +1,5 @@
 // src/core/utils/icon.rs
-//! Icon loading helper: load icon from file path or theme name, with a small in-process cache.
+//! Icon loading helper: unified static, dynamic, and optional icons with caching and theme support.!
 //!
 //! It also installs a one-time watcher for icon-theme changes and clears the cache automatically
 //! when the theme changes.
@@ -172,29 +172,45 @@ pub fn image_from_spec(
     }
 }
 
-/// Ensure an Image exists in `slot` (RefCell<Option<Image>>), create if missing.
-/// Optionally tries to populate it from `spec` and applies `class` and `pixel_size`.
+/// Unified helper for static/dynamic/optional icons.
+/// - `slot` stores the cached Image.
+/// - `configured_name` is the user-specified static icon name, or `"auto"` for dynamic.
+/// - `dynamic_fn` computes the icon name at runtime if dynamic.
+/// - Returns `Some(Image)` or `None` if no icon is to be displayed.
 pub fn ensure_icon(
     slot: &RefCell<Option<Image>>,
-    spec: Option<&str>,
+    configured_name: Option<&str>,
+    dynamic_fn: Option<&dyn Fn() -> String>,
     pixel_size: i32,
-    class: Option<&str>,
-) -> Image {
-    let mut slot_mut = slot.borrow_mut();
-    if slot_mut.is_none() {
+    css_class: Option<&str>,
+) -> Option<Image> {
+    if configured_name.is_none() && dynamic_fn.is_none() {
+        return None; // no icon
+    }
+
+    let mut s = slot.borrow_mut();
+    if s.is_none() {
         let img = Image::new();
-        if let Some(cls) = class {
+        img.set_pixel_size(pixel_size);
+        if let Some(cls) = css_class {
             img.style_context().add_class(cls);
         }
-        img.set_pixel_size(pixel_size);
-
-        if let Some(s) = spec {
-            if let Ok(Some(p)) = load_paintable(Some(s), pixel_size) {
-                apply_paintable(&img, Some(&p));
-            }
-        }
-
-        *slot_mut = Some(img);
+        *s = Some(img);
     }
-    slot_mut.as_ref().unwrap().clone()
+    let img = s.as_ref().unwrap();
+
+    // Determine icon to load
+    let name_to_load = if let Some(f) = dynamic_fn {
+        f()
+    } else if let Some(name) = configured_name {
+        name.to_string()
+    } else {
+        return None;
+    };
+
+    if let Ok(Some(p)) = load_paintable(Some(&name_to_load), pixel_size) {
+        apply_paintable(img, Some(&p));
+    }
+
+    Some(img.clone())
 }

@@ -20,7 +20,6 @@ pub struct CpuItem {
     backend: Rc<RefCell<CpuStatBackend>>,
     timeout_id: RefCell<Option<SourceId>>,
     icon_spec: Option<String>,
-    last_icon: RefCell<Option<String>>,
 }
 
 impl CpuItem {
@@ -37,7 +36,6 @@ impl CpuItem {
             backend,
             timeout_id: RefCell::new(None),
             icon_spec: cfg.icon.clone(),
-            last_icon: RefCell::new(None),
         })
     }
 
@@ -51,19 +49,13 @@ impl CpuItem {
         slot.as_ref().unwrap().clone()
     }
 
-    fn ensure_icon(&self) -> Image {
-        icon::ensure_icon(
-            &self.icon_slot,
-            self.icon_spec.as_deref(),
-            16,
-            Some("cpu-icon"),
-        )
-    }
+    /// Decide which icon to show based on CPU usage.
+    fn choose_dynamic_icon(&self) -> String {
+        let usage = match self.backend.borrow_mut().read() {
+            Ok(u) => u,
+            Err(_) => return "cpu-medium-symbolic".into(),
+        };
 
-    /// Decide which icon to show based on CPU load.
-    /// If user provides an explicit non-"auto" icon, we always use it.
-    /// Otherwise, map ranges to symbolic icons (dynamic).
-    fn choose_icon(&self, usage: f64) -> String {
         match self.icon_spec.as_deref() {
             Some(name) if name != "auto" => name.to_string(),
             _ => match usage as u8 {
@@ -93,20 +85,14 @@ impl CpuItem {
         write!(&mut *buf, "{usage:.0}%").ok();
         self.ensure_label().set_text(&buf);
 
-        // Update dynamic icon if changed
-        let desired = self.choose_icon(usage);
-        let mut last = self.last_icon.borrow_mut();
-        if last.as_ref().map(String::as_str) != Some(desired.as_str()) {
-            let img = self.ensure_icon();
-            icon::apply_paintable(
-                &img,
-                icon::load_paintable(Some(&desired), 16)
-                    .ok()
-                    .flatten()
-                    .as_ref(),
-            );
-            *last = Some(desired);
-        }
+        // Update icon dynamically
+        let _ = icon::ensure_icon(
+            &self.icon_slot,
+            self.icon_spec.as_deref(),
+            Some(&|| self.choose_dynamic_icon()),
+            16,
+            Some("cpu-icon"),
+        );
     }
 
     fn start_timer(&self) {
@@ -134,7 +120,17 @@ impl Item for CpuItem {
 
     fn widget(&self) -> Widget {
         let container = GtkBox::new(Orientation::Horizontal, 4);
-        container.append(&self.ensure_icon());
+
+        if let Some(img) = icon::ensure_icon(
+            &self.icon_slot,
+            self.icon_spec.as_deref(),
+            Some(&|| self.choose_dynamic_icon()),
+            16,
+            Some("cpu-icon"),
+        ) {
+            container.append(&img);
+        }
+
         container.append(&self.ensure_label());
 
         self.update_once();

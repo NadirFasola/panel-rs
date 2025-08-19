@@ -46,7 +46,6 @@ impl TempItem {
         })
     }
 
-    /// Lazily create or retrieve the Label
     fn ensure_label(&self) -> Label {
         let mut slot = self.label_slot.borrow_mut();
         if slot.is_none() {
@@ -57,18 +56,28 @@ impl TempItem {
         slot.as_ref().unwrap().clone()
     }
 
-    /// Lazily create or retrieve the Image
-    fn ensure_icon(&self) -> Image {
-        icon::ensure_icon(
-            &self.icon_slot,
-            self.icon_spec.as_deref(),
-            16,
-            Some("temp-icon"),
-        )
+    /// Determine which icon to show based on maximum temperature
+    fn choose_dynamic_icon(&self) -> String {
+        let max_temp = match self.backend.read() {
+            Ok(readings) if !readings.is_empty() => {
+                readings.iter().map(|(_, t)| *t).fold(f64::MIN, f64::max)
+            }
+            _ => return "temp-medium-symbolic".into(),
+        };
+
+        match self.icon_spec.as_deref() {
+            Some(name) if name != "auto" => name.to_string(),
+            _ => match max_temp as u8 {
+                0..=40 => "temp-low-symbolic",
+                41..=70 => "temp-medium-symbolic",
+                71..=100 => "temp-high-symbolic",
+                _ => "temp-high-symbolic",
+            }
+            .into(),
+        }
     }
 
-    /// Read once, format all sensors into `buffer`, update label
-    fn update_text(&self) {
+    fn update_once(&self) {
         let mut buf = self.buffer.borrow_mut();
         buf.clear();
 
@@ -85,9 +94,16 @@ impl TempItem {
         }
 
         self.ensure_label().set_text(&buf);
+
+        let _ = icon::ensure_icon(
+            &self.icon_slot,
+            self.icon_spec.as_deref(),
+            Some(&|| self.choose_dynamic_icon()),
+            16,
+            Some("temp-icon"),
+        );
     }
 
-    /// Start or restart the polling timer
     fn start_timer(&self) {
         if let Some(id) = self.timeout_id.borrow_mut().take() {
             id.remove();
@@ -98,7 +114,7 @@ impl TempItem {
 
         let id = timeout_add_seconds_local(interval, move || {
             let item = unsafe { &*ptr };
-            item.update_text();
+            item.update_once();
             ControlFlow::Continue
         });
 
@@ -113,10 +129,20 @@ impl Item for TempItem {
 
     fn widget(&self) -> Widget {
         let container = GtkBox::new(Orientation::Horizontal, 4);
-        container.append(&self.ensure_icon());
+
+        if let Some(img) = icon::ensure_icon(
+            &self.icon_slot,
+            self.icon_spec.as_deref(),
+            Some(&|| self.choose_dynamic_icon()),
+            16,
+            Some("temp-icon"),
+        ) {
+            container.append(&img);
+        }
+
         container.append(&self.ensure_label());
 
-        self.update_text();
+        self.update_once();
         self.start_timer();
 
         container.upcast::<Widget>()

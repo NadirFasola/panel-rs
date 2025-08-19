@@ -18,7 +18,6 @@ pub struct MemItem {
     buffer: RefCell<String>,
     timeout_id: RefCell<Option<SourceId>>,
     icon_spec: Option<String>,
-    last_icon: RefCell<Option<String>>,
 }
 
 impl MemItem {
@@ -32,7 +31,6 @@ impl MemItem {
             buffer: RefCell::new(String::with_capacity(8)),
             timeout_id: RefCell::new(None),
             icon_spec: cfg.icon.clone(),
-            last_icon: RefCell::new(None),
         })
     }
 
@@ -46,21 +44,16 @@ impl MemItem {
         slot.as_ref().unwrap().clone()
     }
 
-    fn ensure_icon(&self) -> Image {
-        icon::ensure_icon(
-            &self.icon_slot,
-            self.icon_spec.as_deref(),
-            16,
-            Some("mem-icon"),
-        )
-    }
+    /// Determine which icon to show based on memory usage.
+    fn choose_dynamic_icon(&self) -> String {
+        let usage_pct = match MemInfo::read_from_proc() {
+            Ok(info) => info.usage_percent(),
+            Err(_) => return "mem-medium-symbolic".into(),
+        };
 
-    /// Decide icon name based on memory usage percentage.
-    /// If `icon_spec` is set and non-"auto", use it. Otherwise, dynamic symbolic icons.
-    fn choose_icon(&self, pct: f64) -> String {
         match self.icon_spec.as_deref() {
             Some(name) if name != "auto" => name.to_string(),
-            _ => match pct as u8 {
+            _ => match usage_pct as u8 {
                 0..=30 => "mem-low-symbolic",
                 31..=70 => "mem-medium-symbolic",
                 71..=100 => "mem-high-symbolic",
@@ -88,20 +81,24 @@ impl MemItem {
 
         self.ensure_label().set_text(&buf);
 
-        // Update dynamic icon if changed
-        let desired = self.choose_icon(usage_pct);
-        let mut last = self.last_icon.borrow_mut();
-        if last.as_ref().map(String::as_str) != Some(desired.as_str()) {
-            let img = self.ensure_icon();
-            icon::apply_paintable(
-                &img,
-                icon::load_paintable(Some(&desired), 16)
-                    .ok()
-                    .flatten()
-                    .as_ref(),
-            );
-            *last = Some(desired);
-        }
+        let icon_closure = || match self.icon_spec.as_deref() {
+            Some(name) if name != "auto" => name.to_string(),
+            _ => match usage_pct as u8 {
+                0..=30 => "mem-low-symbolic",
+                31..=70 => "mem-medium-symbolic",
+                71..=100 => "mem-high-symbolic",
+                _ => "mem-medium-symbolic",
+            }
+            .into(),
+        };
+
+        let _ = icon::ensure_icon(
+            &self.icon_slot,
+            self.icon_spec.as_deref(),
+            Some(&icon_closure),
+            16,
+            Some("mem-icon"),
+        );
     }
 
     fn start_timer(&self) {
@@ -129,7 +126,17 @@ impl Item for MemItem {
 
     fn widget(&self) -> Widget {
         let container = GtkBox::new(Orientation::Horizontal, 4);
-        container.append(&self.ensure_icon());
+
+        if let Some(img) = icon::ensure_icon(
+            &self.icon_slot,
+            self.icon_spec.as_deref(),
+            Some(&|| self.choose_dynamic_icon()),
+            16,
+            Some("mem-icon"),
+        ) {
+            container.append(&img);
+        }
+
         container.append(&self.ensure_label());
 
         self.update_once();

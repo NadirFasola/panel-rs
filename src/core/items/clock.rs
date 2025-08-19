@@ -46,14 +46,6 @@ impl ClockItem {
         slot.as_ref().unwrap().clone()
     }
 
-    /// Ensure we have an Image for the configured icon (cached in `icon_slot`).
-    /// Uses the central icon loader which returns a `gdk::Paintable`.
-    fn ensure_icon(&self) -> Option<Image> {
-        self.icon_name
-            .as_ref()
-            .map(|spec| icon::ensure_icon(&self.icon_slot, Some(spec), 16, Some("clock-icon")))
-    }
-
     fn update_text(&self) {
         let now = Local::now();
         let mut buf = self.buffer.borrow_mut();
@@ -89,7 +81,13 @@ impl Item for ClockItem {
     fn widget(&self) -> Widget {
         let container = GtkBox::new(Orientation::Horizontal, 4);
 
-        if let Some(img) = self.ensure_icon() {
+        if let Some(img) = icon::ensure_icon(
+            &self.icon_slot,
+            self.icon_name.as_deref(),
+            None, // Clock has no dynamic icon
+            16,
+            Some("clock-icon"),
+        ) {
             container.append(&img);
         }
 
