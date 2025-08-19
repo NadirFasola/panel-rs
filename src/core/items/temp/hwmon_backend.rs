@@ -38,7 +38,7 @@ impl HwmonBackend {
                         let label = fs::read_to_string(&label_file)
                             .map(|s| s.trim().to_owned())
                             .unwrap_or_else(|_| fname.clone());
-                        sensors.push((format!("{}-{}", chip, label), input));
+                        sensors.push((format!("{chip}-{label}"), input));
                     }
                 }
             }
@@ -77,8 +77,8 @@ impl TemperatureBackend for HwmonBackend {
     fn read(&self) -> Result<Vec<(String, f64)>> {
         let mut readings = Vec::with_capacity(self.sensors.len());
         for (name, path) in &self.sensors {
-            let raw = fs::read_to_string(path)
-                .with_context(|| format!("Reading hwmon file {:?}", path))?;
+            let raw =
+                fs::read_to_string(path).with_context(|| format!("Reading hwmon file {path:?}"))?;
             let millideg: f64 = raw
                 .trim()
                 .parse()
@@ -126,6 +126,7 @@ mod tests {
             backend: TempBackendKind::Hwmon,
             refresh_secs: Some(1),
             sensors: vec![],
+            icon: None,
         };
         let backend = HwmonBackend::new(&cfg).unwrap();
         let readings = backend.read().unwrap();
@@ -161,6 +162,7 @@ mod tests {
             backend: TempBackendKind::Hwmon,
             refresh_secs: Some(1),
             sensors: vec!["chipA-T1".into()],
+            icon: None,
         };
         let backend = HwmonBackend::new(&cfg).unwrap();
         let readings = backend.read().unwrap();

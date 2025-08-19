@@ -65,7 +65,7 @@ impl SysfsBackend {
         let s = txt.trim_end();
         // 3. parse
         s.parse::<u64>()
-            .with_context(|| format!("Parsing {} from sysfs", name))
+            .with_context(|| format!("Parsing {name} from sysfs"))
     }
 }
 

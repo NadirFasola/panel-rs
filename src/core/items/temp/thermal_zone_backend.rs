@@ -35,7 +35,7 @@ impl ThermalZoneBackend {
                 continue;
             }
             let sensor = fs::read_to_string(dir.join("type"))
-                .with_context(|| format!("Reading zone type from {:?}", dir))?
+                .with_context(|| format!("Reading zone type from {dir:?}"))?
                 .trim_end()
                 .to_owned();
             let temp_path = dir.join("temp");
@@ -75,7 +75,7 @@ impl TemperatureBackend for ThermalZoneBackend {
         let mut readings = Vec::with_capacity(self.zones.len());
         for (name, path) in &self.zones {
             let raw = fs::read_to_string(path)
-                .with_context(|| format!("Reading temperature from {:?}", path))?;
+                .with_context(|| format!("Reading temperature from {path:?}"))?;
             let milli: f64 = raw
                 .trim_end()
                 .parse()

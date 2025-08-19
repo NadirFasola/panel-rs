@@ -43,7 +43,7 @@ impl LmSensorsBackend {
                             if let Value::Object(props_map) = props {
                                 if props_map.contains_key("input") {
                                     // build a human‐readable name
-                                    names.push(format!("{}:{}", chip_name, feat));
+                                    names.push(format!("{chip_name}:{feat}"));
                                 }
                             }
                         }
@@ -130,6 +130,7 @@ mod tests {
             backend: TempBackendKind::LmSensors,
             refresh_secs: Some(1),
             sensors: vec![], // “all”
+            icon: None,
         };
         let be = LmSensorsBackend::new(&cfg).unwrap();
         let v = be.read().unwrap();

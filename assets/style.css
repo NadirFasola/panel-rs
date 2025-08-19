@@ -8,3 +8,19 @@
 	font-size: 18px;
 	padding: 0 10px;
 }
+
+.clock-icon {
+  margin-right: 6px;
+}
+
+.clock-label {
+  font-weight: 500;
+}
+
+.battery-icon {
+  margin-right: 6px;
+  /* optional size override for symbolic icons */
+  min-width: 16px;
+  min-height: 16px;
+}
+.battery-label { font-family: monospace; }

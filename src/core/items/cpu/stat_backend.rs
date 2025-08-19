@@ -38,7 +38,7 @@ impl CpuSnapshot {
         let idle = parse_next(&mut fields, "idle")?;
         // optional extra fields: iowait, irq, softirq, steal, guest…
         let mut total = user + nice + system + idle;
-        for (_, name) in ["iowait", "irq", "softirq", "steal"].iter().enumerate() {
+        for name in ["iowait", "irq", "softirq", "steal"] {
             if let Some(v) = fields.next() {
                 let n = v
                     .parse::<u64>()

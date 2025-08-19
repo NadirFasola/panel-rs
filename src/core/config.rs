@@ -52,6 +52,8 @@ pub struct BatteryConfig {
     pub device: Option<String>,
     #[serde(default)]
     pub refresh_secs: Option<u32>,
+    #[serde(default)]
+    pub icon: Option<String>,
 }
 
 impl Default for BatteryConfig {
@@ -60,6 +62,7 @@ impl Default for BatteryConfig {
             backend: BatteryBackendKind::Sysfs,
             device: None,
             refresh_secs: None,
+            icon: None,
         }
     }
 }
@@ -70,6 +73,8 @@ pub struct MemConfig {
     // pub preferred: String,
     #[serde(default)]
     pub refresh_secs: Option<u32>,
+    #[serde(default)]
+    pub icon: Option<String>,
 }
 
 impl Default for MemConfig {
@@ -77,6 +82,7 @@ impl Default for MemConfig {
         MemConfig {
             // preferred: "available",
             refresh_secs: None,
+            icon: None,
         }
     }
 }
@@ -88,6 +94,8 @@ pub struct TempConfig {
     #[serde(default)]
     pub refresh_secs: Option<u32>,
     pub sensors: Vec<String>,
+    #[serde(default)]
+    pub icon: Option<String>,
 }
 
 impl Default for TempConfig {
@@ -96,6 +104,7 @@ impl Default for TempConfig {
             backend: TempBackendKind::ThermalZone,
             refresh_secs: None,
             sensors: Vec::new(),
+            icon: None,
         }
     }
 }
@@ -105,11 +114,16 @@ impl Default for TempConfig {
 pub struct CpuConfig {
     #[serde(default)]
     pub refresh_secs: Option<u32>,
+    #[serde(default)]
+    pub icon: Option<String>,
 }
 
 impl Default for CpuConfig {
     fn default() -> Self {
-        CpuConfig { refresh_secs: None }
+        CpuConfig {
+            refresh_secs: None,
+            icon: None,
+        }
     }
 }
 
@@ -120,6 +134,8 @@ pub struct ClockConfig {
     pub refresh_secs: Option<u32>,
     #[serde(default)]
     pub format: String,
+    #[serde(default)]
+    pub icon: Option<String>,
 }
 
 impl Default for ClockConfig {
@@ -127,6 +143,7 @@ impl Default for ClockConfig {
         ClockConfig {
             refresh_secs: None,
             format: "%H:%M:%S".to_string(),
+            icon: None,
         }
     }
 }

@@ -6,28 +6,23 @@ use super::thermal_zone_backend::ThermalZoneBackend;
 use super::{TempBackendKind, TemperatureBackend};
 use crate::core::config::TempConfig;
 use crate::core::item::Item;
+use crate::core::utils::icon;
 use anyhow::Result;
 use glib::{ControlFlow, SourceId, source::timeout_add_seconds_local};
 use gtk4::prelude::*;
-use gtk4::{Box as GtkBox, Label, Orientation, Widget};
+use gtk4::{Box as GtkBox, Image, Label, Orientation, Widget};
 use std::cell::RefCell;
 use std::fmt::Write;
 use std::sync::Arc;
 
 pub struct TempItem {
     refresh_secs: u32,
-
-    // Lazy label
     label_slot: RefCell<Option<Label>>,
-
-    // Reusable buffer
+    icon_slot: RefCell<Option<Image>>,
     buffer: RefCell<String>,
-
-    // Chosen backend
     backend: Arc<dyn TemperatureBackend>,
-
-    // Timer source
     timeout_id: RefCell<Option<SourceId>>,
+    icon_spec: Option<String>,
 }
 
 impl TempItem {
@@ -43,9 +38,11 @@ impl TempItem {
                 .refresh_secs
                 .expect("TempConfig.refresh_secs must have been filled by Config::load"),
             label_slot: RefCell::new(None),
+            icon_slot: RefCell::new(None),
             buffer: RefCell::new(String::with_capacity(64)),
             backend,
             timeout_id: RefCell::new(None),
+            icon_spec: cfg.icon.clone(),
         })
     }
 
@@ -60,6 +57,16 @@ impl TempItem {
         slot.as_ref().unwrap().clone()
     }
 
+    /// Lazily create or retrieve the Image
+    fn ensure_icon(&self) -> Image {
+        icon::ensure_icon(
+            &self.icon_slot,
+            self.icon_spec.as_deref(),
+            16,
+            Some("temp-icon"),
+        )
+    }
+
     /// Read once, format all sensors into `buffer`, update label
     fn update_text(&self) {
         let mut buf = self.buffer.borrow_mut();
@@ -67,12 +74,11 @@ impl TempItem {
 
         match self.backend.read() {
             Ok(readings) if !readings.is_empty() => {
-                // in-place formatting
                 for (i, (name, temp)) in readings.into_iter().enumerate() {
                     if i > 0 {
                         buf.push(' ');
                     }
-                    write!(&mut *buf, "{name}:{:.0}°C", temp).unwrap();
+                    write!(&mut *buf, "{name}:{temp:.0}°C").unwrap();
                 }
             }
             _ => buf.push_str("Temp N/A"),
@@ -83,17 +89,14 @@ impl TempItem {
 
     /// Start or restart the polling timer
     fn start_timer(&self) {
-        // Remove previous timer
         if let Some(id) = self.timeout_id.borrow_mut().take() {
             id.remove();
         }
 
-        // Capture self by raw pointer
-        let ptr = self as *const TempItem;
         let interval = self.refresh_secs;
+        let ptr = self as *const TempItem;
 
         let id = timeout_add_seconds_local(interval, move || {
-            // SAFETY: TempItem lives as long as the bar
             let item = unsafe { &*ptr };
             item.update_text();
             ControlFlow::Continue
@@ -110,19 +113,16 @@ impl Item for TempItem {
 
     fn widget(&self) -> Widget {
         let container = GtkBox::new(Orientation::Horizontal, 4);
-
-        // Initial display
-        self.update_text();
+        container.append(&self.ensure_icon());
         container.append(&self.ensure_label());
 
-        // Kick off repeating timer
+        self.update_text();
         self.start_timer();
 
         container.upcast::<Widget>()
     }
 
     fn start(&self) -> Result<()> {
-        // In case start() is invoked separately
         self.start_timer();
         Ok(())
     }
